@@ -1,5 +1,7 @@
 smerfs
 ======
+![Example construction, see paper](figs/sphere_grow.jpg)
+
 ### Stochastic Markov Evaluation of Random Fields on the Sphere
 
 This code is based on the paper "Fast generation of isotropic Gaussian random fields on the sphere" by Peter Creasey and Annika Lang ([arxiv](https://arxiv.org/abs/1709.10314)).
