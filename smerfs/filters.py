@@ -7,12 +7,16 @@ load_filter(name) - method to load filters
 build_filter(nz, nphi, coeffs, lmax, eta, dtype) - method to make new filters
 
 """
+from __future__ import print_function, division, unicode_literals, absolute_import
 from numpy.fft import irfft
 from numpy import float64, empty, cumsum, arange, uint32, sqrt, load, pi, sin, empty_like
-from condition import gm_walkz
-from itertools import izip
+from .condition import gm_walkz
 from numpy.random import standard_normal, RandomState
-import cPickle
+
+try:
+    import cPickle as pickle
+except:
+    import pickle
 
 class EquatorialSphereFilter:
     """ 
@@ -105,7 +109,7 @@ class EquatorialSphereFilter:
         assert(name[-4:]=='.dat') # check is a .dat file 
         
         f = open(name, 'wb')
-        cPickle.dump(self._data, f, protocol=2) # need 2 protocol for numpy data in binary
+        pickle.dump(self._data, f, protocol=2) # need 2 protocol for numpy data in binary
         f.close()
 
      
@@ -119,7 +123,7 @@ def load_filter(name, randomstate=None):
     returns sf - SphereFilter or EquatorialSphereFilter
     """
     f = open(name, 'rb')
-    coeffs, transp, innovsp, nz, nphi = cPickle.load(f)
+    coeffs, transp, innovsp, nz, nphi = pickle.load(f)
     f.close()
     
     rs = randomstate
@@ -129,7 +133,7 @@ def load_filter(name, randomstate=None):
     return esf
 
 def packup_coeffs(trans, innovs, dtype):
-    print 'Packing up coefficients'
+    print('Packing up coefficients')
     M = innovs[0].shape[-1]
     trans_packed = trans.astype(dtype)
     
@@ -144,7 +148,7 @@ def packup_coeffs(trans, innovs, dtype):
     return trans_packed, innov_packed
 
 def unpack_coeffs(trans_packed, innov_packed, nz, nphi):
-    print 'Unpacking coefficients'
+    print('Unpacking coefficients')
     # Split out the trans matrices for the different m values.
     M  = trans_packed.shape[-1]
     trans = trans_packed.copy()
@@ -214,10 +218,10 @@ if __name__=='__main__':
     t0 = time()
     res = sf.create_realisation()
     dt = time() - t0
-    print 'Time taken', dt, 's'
+    print('Time taken', dt, 's')
 
     import pylab as pl
 
-    print res.shape
+    print(res.shape)
     pl.imshow(res)
     pl.show()

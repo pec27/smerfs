@@ -1,7 +1,7 @@
 """
 Test extreme values in m, M and z
 """
-
+from __future__ import print_function, division, unicode_literals, absolute_import
 from utils import *
 
 def test_highz():
@@ -18,7 +18,7 @@ def test_highz():
     max_imag = abs(cov.ravel().imag).max()
     asym = abs(cov - cov.T).ravel().max()
 
-    print max_imag, asym
+    print(max_imag, asym)
 
     assert(max_imag<1e-12)
     assert(asym<1e-10)
@@ -39,7 +39,7 @@ def test_high_m():
     max_imag = abs(cov.ravel().imag).max()
     asym = abs(cov - cov.T).ravel().max()
 
-    print max_imag, asym
+    print(max_imag, asym)
     
     assert(max_imag<1e-12)
     assert(asym<1e-10)
@@ -59,7 +59,7 @@ def test_high_M():
     max_imag = abs(cov.ravel().imag).max()
     asym = abs(cov - cov.T).ravel().max()
 
-    print max_imag, asym
+    print(max_imag, asym)
     
     assert(max_imag<1e-8)
     assert(asym<1e-8)

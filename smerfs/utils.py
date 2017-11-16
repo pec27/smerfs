@@ -1,6 +1,7 @@
 """
 Utility functions (typically for comparing power spectra)
 """
+from __future__ import print_function, division, unicode_literals, absolute_import
 from numpy import arange, float64, inner, cumprod, flatnonzero, empty, pi, zeros
 from scipy.special import lpn
 
@@ -19,7 +20,7 @@ def make_cl(coeffs, lmax):
     C_l = 1.0 / inner(cumprod(C_l, axis=1), coeffs)
 
     if C_l.min() <  0.0:
-        print 'C_l in', C_l.min(), C_l.max()
+        print('C_l in', C_l.min(), C_l.max())
         l = flatnonzero(C_l<0)[0]
         raise Exception('At l=%d, C_l=%f. C_l must all be positive!'%(l, C_l[l]))
     return C_l

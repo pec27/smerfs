@@ -1,10 +1,11 @@
 """
 Build the coefficients for conditional sampling, e.g. g_m(z1) | g_m(z_1)
 """
+from __future__ import print_function, division, unicode_literals, absolute_import
 from numpy import float64, arange, pi, cos, sin, empty, transpose, isfinite, dot
 from time import time
 from numpy.linalg import cholesky, inv, LinAlgError, det, eigvalsh
-from cov import cov_covar
+from .cov import cov_covar
 
 def _state_space_innovations(cov00, cov11, cov10):
     """
@@ -30,8 +31,8 @@ def _state_space_innovations(cov00, cov11, cov10):
     try:
         innov = cholesky(A)
     except LinAlgError:
-        print 'Could not make cholesky decomposition of'
-        print A
+        print('Could not make cholesky decomposition of')
+        print(A)
         raise
     return innov, trans
 
@@ -92,13 +93,13 @@ def gm_walkz(nz, msize, coeffs, dtype=float64):
     innovs = empty((msize,len(z_pts),M,M), dtype=dtype) 
     trans  = empty((msize,len(z_pts)-1,M,M), dtype=dtype) 
 
-    print 'Building covariances',
+    print('Building covariances',end='')
     t0 = time()
     cov_all, cross_all = cov_covar(z_pts, msize-1, coeffs)
     t1 = time()
-    print '[in %.3fs]'%(t1-t0)
+    print('[in %.3fs]'%(t1-t0))
     t0 = t1
-    print 'Matrix decomposition',
+    print('Matrix decomposition',end='')
     
     for m in range(msize):
 
@@ -116,11 +117,11 @@ def gm_walkz(nz, msize, coeffs, dtype=float64):
                 try:
                     _state_space_innovations(cov[i], cov[i+1], cross_cov[i])
                 except LinAlgError:
-                    print 'At m=%d, z[%d]=%f -> z[%d]=%f (of %d), failed to perform cholesky decomposition of matrix'%(m,i,z_pts[i], i+1,z_pts[i+1],len(cross_cov))
-                    print 'Covariance 0\n',cov[i]
-                    print 'Covariance 1\n',cov[i+1]
-                    print 'Cross\n', cross_cov[i]
-                    print 'Number of phi points (%d)'%(2*msize-2)
+                    print('At m=%d, z[%d]=%f -> z[%d]=%f (of %d), failed to perform cholesky decomposition of matrix'%(m,i,z_pts[i], i+1,z_pts[i+1],len(cross_cov)))
+                    print('Covariance 0\n',cov[i])
+                    print('Covariance 1\n',cov[i+1])
+                    print('Cross\n', cross_cov[i])
+                    print('Number of phi points (%d)'%(2*msize-2))
                     raise
             raise Exception('Failure in array of matrices but not individually. This should never happen.')
             raise
@@ -134,7 +135,7 @@ def gm_walkz(nz, msize, coeffs, dtype=float64):
     t1 = time()
     dt, t0 = t1-t0, t1
     
-    print '[in %.3fs]'%dt
+    print('[in %.3fs]'%dt)
 
     return trans, innovs
 

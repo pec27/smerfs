@@ -1,8 +1,8 @@
 """
 Optimised covariance and cross-covariance
 """
-
-from lib import chyp_c
+from __future__ import print_function, division, unicode_literals, absolute_import
+from . import chyp_c
 from numpy import sqrt, complex128, pi, sin, roots, unique, real, zeros, shape, empty, empty_like, ones, power
 import numpy as np
 
@@ -44,7 +44,7 @@ def partial_decomposition(coeffs):
     b = roots(list(reversed(coeffs)))
     
     if len(unique(b))!=len(b):
-        print 'Polynomial has', len(b), 'roots but only', len(unique(b)), 'unique roots'
+        print('Polynomial has', len(b), 'roots but only', len(unique(b)), 'unique roots')
         raise Exception('Power spectrum has repeated roots.')
 
     a = [1.0 / sum((n+1) * c_i * b_i**n for n,c_i in enumerate(coeffs[1:])) for b_i in b]
@@ -54,8 +54,8 @@ def partial_decomposition(coeffs):
 def cov_covar(zpts, m_max, coeffs):
     """ Find the covariance and cross covariance matrices for the zpts """
     if all(zpts[:-1] > zpts[1:]):
-        print 'In reverse order to normal (increasing z)'
-        print 'Call the function and reverse'
+        print('In reverse order to normal (increasing z)')
+        print('Call the function and reverse')
         cov, cross_cov = all_z_covar_hyp(zpts[::-1], m, coeffs)
         cov = transpose(cov[:,:,::-1], (1,0,2))
         cross_cov = transpose(cross_cov[:,:,::-1], (1,0,2))

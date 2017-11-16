@@ -1,5 +1,5 @@
 """ testing the Green's function parts """
-
+from __future__ import print_function, division, unicode_literals, absolute_import
 from utils import *
 
 
@@ -22,7 +22,7 @@ def test_wronskian():
         err = abs(w_num-w) / abs(w)
         
 
-        print w, w_num, err
+        print(w, w_num, err)
         assert(err<1e-7)
     
 
@@ -40,8 +40,8 @@ def test_Pml():
         err = abs(p-p_scipy) / abs(p_scipy)
         
         if err>1e-9:
-            print p, p_scipy, err
-        print 'm=%d l=%d x=%.5f'%(m,lam,x), 'error', err
+            print(p, p_scipy, err)
+        print('m=%d l=%d x=%.5f'%(m,lam,x), 'error', err)
         assert(err<1e-6)
 
 def test_green_jump():
@@ -57,12 +57,12 @@ def test_green_jump():
         # Difference eqn of derivatives
         gp = lambda z: G_m_llp1(z+dx,x, m, llp1)
         gm = lambda z: G_m_llp1(z-dx,x, m, llp1)
-        Ap = -num_deriv(gp, x, dx*0.5) * (1-x*x)
-        Am = -num_deriv(gm, x, dx*0.5) * (1-x*x)
+        Ap = -num_deriv(gp, x, dx) * (1-x*x)
+        Am = -num_deriv(gm, x, dx) * (1-x*x)
     
         jump = Ap-Am
         err = abs(jump-1.0)
-        print 'Jump condition', jump, 'err', err, 'expected 1.0'
+        print('Jump condition', jump, 'err', err, 'expected 1.0')
         assert(err<1e-6)
         
         
@@ -89,7 +89,7 @@ def test_prefac():
             w1 *= cumprod((v*(v+1) - llp1)/square(1+v))[-1]
         err = abs(w1-w0)
 
-        print 'm=',m,'lam=',lam, 'w0', w0, 'w1', w1,'err', err
+        print('m=',m,'lam=',lam, 'w0', w0, 'w1', w1,'err', err)
         assert(err<1e-13)
         
 def test_cov_symmetric_real():
@@ -98,15 +98,15 @@ def test_cov_symmetric_real():
     """
 
     for coeffs in [(1.0, 0.0, 0.1), (1.0, 0.0, 0.0, -0.1), (1.0, 0.0, 0.0, 0.0, 0.1)]:
-        print 'coeffs=',coeffs
+        print('coeffs=',coeffs)
         for m in [0,3,6]:
-            print 'm=',m
+            print('m=',m)
             for x in [-0.3, 0.5, 0.8]:
 
                 cov = Jpq(m, coeffs, x, x)
                 max_imag = abs(cov.ravel().imag).max()
                 asym = abs(cov - cov.T).ravel().max()
-                print 'x=', x,'Asym', asym, 'Max imaginary part', max_imag
+                print('x=', x,'Asym', asym, 'Max imaginary part', max_imag)
                 assert(asym<1e-10)
                 assert(max_imag<1e-12)
 
@@ -116,9 +116,9 @@ def test_opt_cov():
     """
 
     for coeffs in [(1.0, 0.0, 0.1), (1.0, 0.0, 0.0, -0.1), (1.0, 0.0, 0.0, 0.0, 0.1)]:
-        print 'coeffs=',coeffs
+        print('coeffs=',coeffs)
         for m in [0,3,6]:
-            print 'm=',m
+            print('m=',m)
             for x in [-0.3, 0.5, 0.8]:
 
                 covA = Jpq(m, coeffs, x, x)
@@ -129,7 +129,7 @@ def test_opt_cov():
                 d = abs(cov-covA).max()
                 max_imag = abs(cov.ravel().imag).max()
                 asym = abs(cov - cov.T).ravel().max()
-                print 'x=', x,covA.shape, cov.shape,'Asym', asym, 'Max imaginary part', max_imag, 'matrix difference', d, covA, 'new', cov
+                print('x=', x,covA.shape, cov.shape,'Asym', asym, 'Max imaginary part', max_imag, 'matrix difference', d, covA, 'new', cov)
                 assert(d<1e-10)
                 assert(asym<1e-10)
                 assert(max_imag<1e-12)
@@ -142,9 +142,9 @@ def test_opt_cross_cov():
     """
 
     for coeffs in [(1.0, 0.0, 0.1), (1.0, 0.0, 0.0, -0.1), (1.0, 0.0, 0.0, 0.0, 0.1)]:
-        print 'coeffs=',coeffs
+        print('coeffs=',coeffs)
         for m in [0,3,6]:
-            print 'm=',m
+            print('m=',m)
             xpts = [-0.3, 0.5, 0.8]
             for x,y in zip(xpts[:-1], xpts[1:]):
 
@@ -156,7 +156,7 @@ def test_opt_cross_cov():
                 d = abs(cov-covA).max()
                 max_imag = abs(cov.ravel().imag).max()
 
-                print 'x=', x,'y', y, 'Max imaginary part', max_imag, 'matrix difference', d,
+                print('x=', x,'y', y, 'Max imaginary part', max_imag, 'matrix difference', d,end='')
                 assert(d<1e-12)
                 assert(max_imag<1e-12)
     
