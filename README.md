@@ -4,7 +4,7 @@ smerfs
 
 ### Stochastic Markov Evaluation of Random Fields on the Sphere
 
-This code is based on the paper "Fast generation of isotropic Gaussian random fields on the sphere" by Peter Creasey and Annika Lang ([arxiv](https://arxiv.org/abs/1709.10314)).
+This code is based on the paper "Fast generation of isotropic Gaussian random fields on the sphere" by Peter Creasey and Annika Lang (Monte Carlo Methods and Applications, 24, 1–11, [arxiv](https://arxiv.org/abs/1709.10314), [published version](https://doi.org/10.1515/mcma-2018-0001)).
 
 Once you have downloaded Smerfs you will probably want to do the following:
 
@@ -77,3 +77,18 @@ All of these are equivalent to running
 ```
 python examples/example1.py
 ```
+
+### Saving the filters
+
+If you plan to re-use the filter coefficients for a given power spectrum you (construction being the slowest part of the process) you can store the filters with
+
+```python
+from smerfs import build_filter, load_filter
+sf = build_filter(nz,nphi, coeffs, dtype=dtype)
+sf.save('filter.dat')
+
+# Load it again 
+sf = load_filter('filter.dat')
+```
+
+Although every effort has been made to keep the file sizes small (e.g. using symmetry to avoid storing coefficients for the lower half of the sphere, keeping only the lower-triangle of the matrix decomposition), you may also wish to use `dtype=numpy.float32` for large filters to halve the file size (with corresponding loss of precision). Note this uses `pickle` internally, which can be a security issue if you are using filters from unknown sources.
