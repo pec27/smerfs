@@ -79,7 +79,7 @@ def G_m_llp1_pq(x,y, m, llp1, M):
             else:
                 r = power(-1,q) * P_m_llp1(m+p, llp1,x) *P_m_llp1(m+q, llp1,-y)
 
-            res[p,q] = r * 0.5 * gamma(-lam-m)*gamma(1+lam-m)
+            res[p,q] = r[0] * 0.5 * gamma(-lam-m)*gamma(1+lam-m)
     return res
 
 def num_deriv(f, x, dx=1e-5):

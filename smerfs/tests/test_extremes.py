@@ -2,7 +2,7 @@
 Test extreme values in m, M and z
 """
 from __future__ import print_function, division, unicode_literals, absolute_import
-from utils import *
+from .utils import *
 
 def test_highz():
     """

@@ -7,6 +7,7 @@ import ctypes
 from numpy import float64, frombuffer, empty, complex128, array, require
 from os import path
 import sys
+import sysconfig
 
 _libsmerfs = None
 c_contig = 'C_CONTIGUOUS' 
@@ -18,7 +19,9 @@ def initlib():
     if _libsmerfs is not None:
         return _libsmerfs
 
-    name = path.join(path.dirname(path.abspath(__file__)), '../build/libsmerfs.so')
+    suffix = sysconfig.get_config_var('SO')
+
+    name = path.join(path.dirname(path.abspath(__file__)), '../build/libsmerfs'+suffix)
     if not path.exists(name):
         raise Exception('Library '+str(name)+' does not exist. Maybe you forgot to make it?')
 

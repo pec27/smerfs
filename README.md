@@ -10,16 +10,14 @@ Once you have downloaded Smerfs you will probably want to do the following:
 
 ## Install
 
-Build the C-functions with
+Install (also builds the C-functions)
 
 ```bash
-make
+python setup.py install [--prefix=/myhome/my-site-packages]
 ```
-
-Run the tests, e.g. with
-
+and run the tests,
 ```bash
-nosetests tests/
+python setup.py test
 ```
 (use `-v` verbose or `-vs` for really verbose)
 
