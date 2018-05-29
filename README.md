@@ -19,13 +19,6 @@ and run the tests,
 ```bash
 python setup.py test
 ```
-(use `-v` verbose or `-vs` for really verbose)
-
-Add smerfs to your PYTHONPATH, perhaps in your .profile e.g.
-```bash
-PYTHONPATH="${PYTHONPATH}:${HOME}/codes/smerfs"
-export PYTHONPATH
-```
 
 ## Examples
 These probably need at least python 2.7 and a (non-ancient) numpy and scipy. 
