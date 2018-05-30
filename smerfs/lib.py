@@ -1,5 +1,5 @@
 """
-Load the compiled library (libsmerfs.so) from ../build
+Load the compiled library (libsmerfs.so) 
 """
 from __future__ import print_function, division, absolute_import
 from numpy.ctypeslib import ndpointer
@@ -21,7 +21,7 @@ def initlib():
 
     suffix = sysconfig.get_config_var('SO')
 
-    name = path.join(path.dirname(path.abspath(__file__)), '../build/libsmerfs'+suffix)
+    name = path.join(path.dirname(path.abspath(__file__)), '../libsmerfs'+suffix)
     if not path.exists(name):
         raise Exception('Library '+str(name)+' does not exist. Maybe you forgot to make it?')
 

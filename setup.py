@@ -1,6 +1,6 @@
 from setuptools import setup, Extension
 
-lib = Extension('build/libsmerfs',
+lib = Extension('libsmerfs',
                 sources = ['src/smerfs.c'])
 
 
