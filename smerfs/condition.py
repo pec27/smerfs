@@ -103,7 +103,7 @@ def gm_walkz(nz, msize, coeffs, dtype=float64, log=None):
         cross_cov = cross_all[m] 
 
         try:
-            tran, innov = _state_space_innovations_all(cov, cross_cov, log)
+            tran, innov = _state_space_innovations_all(cov, cross_cov)
         except LinAlgError:
             # Must have failed the Cholesky (or inversion) of one of the matrices
             for i in range(len(cross_cov)):
