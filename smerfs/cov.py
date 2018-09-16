@@ -51,11 +51,11 @@ def partial_decomposition(coeffs):
 
     return a, b
 
-def cov_covar(zpts, m_max, coeffs):
+def cov_covar(zpts, m_max, coeffs, log=None):
     """ Find the covariance and cross covariance matrices for the zpts """
     if all(zpts[:-1] > zpts[1:]):
-        print('In reverse order to normal (increasing z)')
-        print('Call the function and reverse')
+        print('In reverse order to normal (increasing z)', file=log)
+        print('Call the function and reverse', file=log)
         cov, cross_cov = all_z_covar_hyp(zpts[::-1], m, coeffs)
         cov = transpose(cov[:,:,::-1], (1,0,2))
         cross_cov = transpose(cross_cov[:,:,::-1], (1,0,2))
@@ -71,23 +71,42 @@ def cov_covar(zpts, m_max, coeffs):
 
     # twiddle factors
     tau = sqrt((1.0-zpts)/(1.0+zpts))
-
+    tau_p = empty((tau.shape[0],M), dtype=tau.dtype)
+    tau_p[:,0] = 1.0
+    tau_p[:,1] = tau
+    for i in range(2,M):
+        tau_p[:,i] = tau_p[:,i-1]*tau
+    inv_tau_p = 1.0/tau_p
 
     zeta = empty(M, dtype=complex128)
     zetaA = empty(M, dtype=complex128) # alternating (-1)^p factor
     F = empty((m_max+M+1, len(zpts)), dtype=complex128)
     H = empty_like(F)
     
-    cov = zeros((m_max+1,M,M,len(zpts)), dtype=complex128)
-    cross_cov = zeros((m_max+1,M,M,len(zpts)-1), dtype=complex128)
+    cov = zeros((m_max+1,len(zpts), M, M), dtype=complex128)
+    cross_cov = zeros((m_max+1,len(zpts)-1, M, M), dtype=complex128)
+
+    x = 0.5-zpts*0.5
+    y = 0.5+zpts*0.5
 
     # Loop over partial fraction decomposition
-    for ai, llp1 in zip(a, kvals):
+    for i, (ai, llp1) in enumerate(zip(a, kvals)):
 
+
+
+        if len(kvals)==2 and i==1 and llp1==kvals[i-1].conj():
+            print('Using conjugation for coefficient pair', file=log)
+            cov += cov.conj()
+            cross_cov += cross_cov.conj()
+            return cov, cross_cov
+
+
+#        print('Hypergeometric funcn calc', file=log)
         for m in range(m_max+M+1):
-            F[m] = chyp_c(llp1, m, 0.5-zpts*0.5)
-            H[m] = chyp_c(llp1, m, 0.5+zpts*0.5)
-            
+            F[m] = chyp_c(llp1, m, x)
+            H[m] = chyp_c(llp1, m, y)
+
+#        print('Putting into matrix', file=log)
         eta = ones(len(zpts)-1)
         zeta[0] = -(0.25/pi) * ai * pi / sin(lam_from_llp1(llp1)*pi)
         zetaA[0] = 1.0        
@@ -101,14 +120,19 @@ def cov_covar(zpts, m_max, coeffs):
             zeta = np.cumprod(zeta)
             zetaA = np.cumprod(zetaA)
 
-            # Todo: numpy broadcast with reshape
+            zF = np.empty((len(zpts), M), dtype=complex128)
+            zAH = np.empty((len(zpts), M), dtype=complex128)
+
+
             for p in range(M):
-                for q in range(M):
-                    cov[m,p,q] += power(tau, p-q) * zeta[p] * zetaA[q] * F[m+p] * H[m+q]
-                    cross_cov[m,p,q] += eta * power(tau[1:], q) / power(tau[:-1], p) * zeta[q] * zetaA[p] * H[m+p,:-1] * F[m+q,1:]
+                zF[:,p] = tau_p[:,p] * zeta[p] * F[m+p] 
+                zAH[:,p] = inv_tau_p[:,p] * zetaA[p] * H[m+p]
+
+            cov[m] += np.reshape(zF,(len(zpts),M,1)) * np.reshape(zAH, (len(zpts),1,M))
+            cross_cov[m] += np.reshape(eta, (len(zpts)-1, 1,1)) * np.reshape(zF[1:], (len(zpts)-1,M,1)) * np.reshape(zAH[:-1], (len(zpts)-1,1,M)) 
 
             zeta[0] = zeta[1]/(m+1)
-            eta *= tau[1:] / tau[:-1]
+            eta *= tau[1:] * inv_tau_p[:-1,1]
 
     return cov, cross_cov
 

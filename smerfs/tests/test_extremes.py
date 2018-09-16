@@ -13,7 +13,7 @@ def test_highz():
     coeffs = (1.0, 0.0, 0.1)
 
     cov, covar = cov_covar(z, m+1, coeffs)
-    cov = cov[m,:,:,0]
+    cov = cov[m,0]
 
     max_imag = abs(cov.ravel().imag).max()
     asym = abs(cov - cov.T).ravel().max()
@@ -34,7 +34,7 @@ def test_high_m():
     coeffs = (1.0, 0.0, 0.1)
 
     cov, covar = cov_covar(z, m+1, coeffs)
-    cov = cov[m,:,:,0]
+    cov = cov[m,0]
 
     max_imag = abs(cov.ravel().imag).max()
     asym = abs(cov - cov.T).ravel().max()
@@ -54,7 +54,7 @@ def test_high_M():
     coeffs = (1.0,)+(0.0,)*4 + (0.1,)
 
     cov, covar = cov_covar(z, m+1, coeffs)
-    cov = cov[m,:,:,0]
+    cov = cov[m,0]
 
     max_imag = abs(cov.ravel().imag).max()
     asym = abs(cov - cov.T).ravel().max()

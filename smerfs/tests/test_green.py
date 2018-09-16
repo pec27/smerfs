@@ -123,7 +123,7 @@ def test_opt_cov():
                 covA = Jpq(m, coeffs, x, x)
 
                 covO, covarO = cov_covar(array([x,x]), m+1, coeffs)
-                cov = covO[m,:,:,0]
+                cov = covO[m,0]
                 
                 d = abs(cov-covA).max()
                 max_imag = abs(cov.ravel().imag).max()
@@ -150,7 +150,7 @@ def test_opt_cross_cov():
                 covA = Jpq(m, coeffs, x, y)
 
                 covO, covarO = cov_covar(array([x,y]), m+1, coeffs)
-                cov = covarO[m,:,:,0]
+                cov = covarO[m,0].T
                 
                 d = abs(cov-covA).max()
                 max_imag = abs(cov.ravel().imag).max()

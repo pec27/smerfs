@@ -2,9 +2,11 @@
 Build the coefficients for conditional sampling, e.g. g_m(z1) | g_m(z_1)
 """
 from __future__ import print_function, division, unicode_literals, absolute_import
-from numpy import float64, arange, pi, cos, sin, empty, transpose, isfinite, dot
+from numpy import float64, arange, pi, cos, sin, empty, transpose, isfinite, \
+    dot, expand_dims
 from time import time
 from numpy.linalg import cholesky, inv, LinAlgError, det, eigvalsh
+from scipy.linalg.lapack import dpotri
 from .cov import cov_covar
 
 def _state_space_innovations(cov00, cov11, cov10):
@@ -46,29 +48,21 @@ def _state_space_innovations_all(cov, cross_cov):
     n = cross_cov.shape[0]
     innov = cov.copy()
 
-    
-
     # Build the transition matrix
     trans = inv(cov[:-1])
-    trans.shape = (n,1,M,M)
-    cross_cov.shape = (n,M,1,M)
-    trans = (trans*cross_cov).sum(3)
+    cross_cov = expand_dims(cross_cov, axis=2) # (n,M,1,M)
+    trans = (expand_dims(trans, axis=1)*cross_cov).sum(3) # (n,M,M)
 
     # Now the innovation matrix
     # The first step of the walk has no transition
-    trans.shape = (n,1,M,M)
-    innov[1:] -= (cross_cov * trans).sum(3)
-
-    # restore the arrays to good shapes
-    trans.shape = (n,M,M)
-    cross_cov.shape = (n,M,M)
+    innov[1:] -= (cross_cov * expand_dims(trans, axis=1)).sum(3)
 
     # cholesky decomposition of innovation matrix
     innov = cholesky(innov)
 
     return trans, innov
     
-def gm_walkz(nz, msize, coeffs, dtype=float64):
+def gm_walkz(nz, msize, coeffs, dtype=float64, log=None):
     """ 
     construct a filter for mode m as it walks down z in zpts, i.e.
     X[0] =             Q[0] W[0]
@@ -93,23 +87,23 @@ def gm_walkz(nz, msize, coeffs, dtype=float64):
     innovs = empty((msize,len(z_pts),M,M), dtype=dtype) 
     trans  = empty((msize,len(z_pts)-1,M,M), dtype=dtype) 
 
-    print('Building covariances',end='')
     t0 = time()
-    cov_all, cross_all = cov_covar(z_pts, msize-1, coeffs)
+    cov_all, cross_all = cov_covar(z_pts, msize-1, coeffs, log)
+    cov_all, cross_all = cov_all.real, cross_all.real
+    
     t1 = time()
-    print('[in %.3fs]'%(t1-t0))
+    print('Built covariances [in %.3fs]'%(t1-t0), file=log)
     t0 = t1
-    print('Matrix decomposition',end='')
     
     for m in range(msize):
 
-
+        
         # Arrange the arrays so we can use numpy to simultaneously do the state-space transitions
-        cov = transpose(cov_all[m].real, (2,0,1))
-        cross_cov = transpose(cross_all[m].real, (2,1,0)) # having to transpose p and q, did I switch somewhere?
+        cov = cov_all[m]
+        cross_cov = cross_all[m] 
 
         try:
-            tran, innov = _state_space_innovations_all(cov, cross_cov)
+            tran, innov = _state_space_innovations_all(cov, cross_cov, log)
         except LinAlgError:
             # Must have failed the Cholesky (or inversion) of one of the matrices
             for i in range(len(cross_cov)):
@@ -134,8 +128,7 @@ def gm_walkz(nz, msize, coeffs, dtype=float64):
 
     t1 = time()
     dt, t0 = t1-t0, t1
-    
-    print('[in %.3fs]'%dt)
+    print('Matrix decomposition [in %.3fs]'%dt, file=log)
 
     return trans, innovs
 
