@@ -8,6 +8,7 @@ from time import time
 from numpy.linalg import cholesky, inv, LinAlgError, det, eigvalsh
 from scipy.linalg.lapack import dpotri
 from .cov import cov_covar
+from .lib import inv_sym
 
 def _state_space_innovations(cov00, cov11, cov10):
     """
@@ -49,7 +50,7 @@ def _state_space_innovations_all(cov, cross_cov):
     innov = cov.copy()
 
     # Build the transition matrix
-    trans = inv(cov[:-1])
+    trans = inv_sym(cov[:-1])
     cross_cov = expand_dims(cross_cov, axis=2) # (n,M,1,M)
     trans = (expand_dims(trans, axis=1)*cross_cov).sum(3) # (n,M,M)
 

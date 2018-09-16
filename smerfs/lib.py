@@ -5,6 +5,7 @@ from __future__ import print_function, division, absolute_import
 from numpy.ctypeslib import ndpointer
 import ctypes
 from numpy import float64, frombuffer, empty, complex128, array, require
+from numpy.linalg import inv, LinAlgError
 from os import path
 import sys
 import sysconfig
@@ -35,8 +36,36 @@ def initlib():
     func.restype = ctypes.c_int
     func.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_int, ndpointer(ctypes.c_double, flags=c_contig), ndpointer(complex128, flags=c_contig)]
 
+    # Invert many small symmetric matrices
+    # int inverse(const int N, const int M, const double *restrict matrices, double *restrict out)
+    func = _libsmerfs.inverse
+    func.restype = ctypes.c_int
+    func.argtypes = [ctypes.c_int, ctypes.c_int, ndpointer(ctypes.c_double, flags=c_contig), ndpointer(ctypes.c_double, flags=c_contig)]
+    
     return _libsmerfs
     
+def inv_sym(matrices):
+    """
+    Inverse of many small symmetric matrices
+    """
+    assert(len(matrices.shape)==3)
+    assert(matrices.shape[1]==matrices.shape[2])
+    N = matrices.shape[0]
+    M = matrices.shape[1]
+    if M>3:
+        return np.inv(matrices)
+
+    matrices = require(matrices, dtype=float64, requirements=[c_contig])
+    out = empty((N,M,M), dtype=float64)
+    lib = initlib()
+    res = lib.inverse(N,M,matrices, out)
+    if res==-1:
+        raise Exception('Matrix size %d not supported'%M)
+    if res>0:
+        raise LinAlgError('Singular matrix (%d)'%(res-1))
+        
+    return out
+
 def chyp_c(llp1, m, z):
     """
     Calculates the Gauss hypergeometric function
