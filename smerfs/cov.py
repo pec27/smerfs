@@ -3,7 +3,8 @@ Optimised covariance and cross-covariance
 """
 from __future__ import print_function, division, unicode_literals, absolute_import
 from . import chyp_c
-from numpy import sqrt, complex128, pi, sin, roots, unique, real, zeros, shape, empty, empty_like, ones, power
+from .lib import update_cov
+from numpy import sqrt, complex128, float64, pi, sin, roots, unique, real, zeros, shape, empty, empty_like, ones, power
 import numpy as np
 
 def lam_from_llp1(llp1):
@@ -70,16 +71,16 @@ def cov_covar(zpts, m_max, coeffs, log=None):
     cross_cov = zeros((M,M)+shape(zpts[1:]), dtype=complex128)
 
     # twiddle factors
-    tau = sqrt((1.0-zpts)/(1.0+zpts))
-    tau_p = empty((tau.shape[0],M), dtype=tau.dtype)
-    tau_p[:,0] = 1.0
-    tau_p[:,1] = tau
+    tau_p = empty((2*M-1,len(zpts)), dtype=float64)
+    tau_p[M-1] = 1.0;
+    tau_p[M] = sqrt((1.0-zpts)/(1.0+zpts)) # tau^1
+    tau_p[M-2] = 1.0/tau_p[M] # tau^-1
     for i in range(2,M):
-        tau_p[:,i] = tau_p[:,i-1]*tau
-    inv_tau_p = 1.0/tau_p
+        tau_p[M+i-1] = tau_p[M+i-2]*tau_p[M] # tau^i
+        tau_p[M-1-i] = tau_p[M-i]*tau_p[M-2] # tau^-i
 
-    zeta = empty(M, dtype=complex128)
-    zetaA = empty(M, dtype=complex128) # alternating (-1)^p factor
+    eta_ratio = tau_p[M,1:] * tau_p[M-2,:-1]
+
     F = empty((m_max+M+1, len(zpts)), dtype=complex128)
     H = empty_like(F)
     
@@ -91,7 +92,6 @@ def cov_covar(zpts, m_max, coeffs, log=None):
 
     # Loop over partial fraction decomposition
     for i, (ai, llp1) in enumerate(zip(a, kvals)):
-
 
 
         if len(kvals)==2 and i==1 and llp1==kvals[i-1].conj():
@@ -106,33 +106,11 @@ def cov_covar(zpts, m_max, coeffs, log=None):
             F[m] = chyp_c(llp1, m, x)
             H[m] = chyp_c(llp1, m, y)
 
-#        print('Putting into matrix', file=log)
-        eta = ones(len(zpts)-1)
-        zeta[0] = -(0.25/pi) * ai * pi / sin(lam_from_llp1(llp1)*pi)
-        zetaA[0] = 1.0        
 
-        for m in range(m_max+1):
+        norm = -(0.25/pi) * ai * pi / sin(lam_from_llp1(llp1)*pi)
 
-            # zeta symbols
-            v = (m+1)+np.arange(M-1)
-            zeta[1:] = (v*(v-1) - llp1)/v
-            zetaA[1:] = -zeta[1:]
-            zeta = np.cumprod(zeta)
-            zetaA = np.cumprod(zetaA)
-
-            zF = np.empty((len(zpts), M), dtype=complex128)
-            zAH = np.empty((len(zpts), M), dtype=complex128)
-
-
-            for p in range(M):
-                zF[:,p] = tau_p[:,p] * zeta[p] * F[m+p] 
-                zAH[:,p] = inv_tau_p[:,p] * zetaA[p] * H[m+p]
-
-            cov[m] += np.reshape(zF,(len(zpts),M,1)) * np.reshape(zAH, (len(zpts),1,M))
-            cross_cov[m] += np.reshape(eta, (len(zpts)-1, 1,1)) * np.reshape(zF[1:], (len(zpts)-1,M,1)) * np.reshape(zAH[:-1], (len(zpts)-1,1,M)) 
-
-            zeta[0] = zeta[1]/(m+1)
-            eta *= tau[1:] * inv_tau_p[:-1,1]
+#        print('Putting into matrix in C', file=log)
+        update_cov(tau_p, eta_ratio, norm, llp1, F, H, cov, cross_cov)
 
     return cov, cross_cov
 

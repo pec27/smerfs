@@ -1,7 +1,7 @@
 /*
   Linear algebra (for when numpy.linalg is too slow)
  */
-
+#include <math.h>
 
 int inverse(const int N, const int M, const double *restrict matrices, double *restrict out)
 {
@@ -47,6 +47,42 @@ int inverse(const int N, const int M, const double *restrict matrices, double *r
       }
   else
     return -1; // Matrix size not supported
+
+  return 0;
+}
+
+int cholesky(const int N, const int M, const double *restrict matrices, double *restrict out)
+{
+  /*
+    Cholesky (lower) of N symmetric MxM matrices  
+    where M=2
+
+    N        - number of matrices
+    M        - size of matrix (MxM)
+    matrices - (N*M*M) array of doubles for matrices
+    out      - (N*M*M) array of double for outputs (lower triangles)
+
+    returns 0 on success, i+1 if i-th matrix failed, -1 if M unsupported
+
+
+   */
+  if (M==2)
+    for (int i=0;i<N;++i, matrices+=4, out+=4)
+      {
+	const double a11=matrices[0], a12=matrices[1], a22=matrices[3];
+
+	const double b2 = a12*a12/a11, c2= a22-b2;
+	
+	if ((a11<0) | (c2<0))
+	  return i+1; // Not positive def.
+
+	out[0] = sqrt(a11);
+	out[1] = 0.0;
+	out[2] = a12/out[0];
+	out[3] = sqrt(c2);
+      }
+  else 
+    return -1;
 
   return 0;
 }

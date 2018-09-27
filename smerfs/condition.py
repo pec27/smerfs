@@ -8,7 +8,7 @@ from time import time
 from numpy.linalg import cholesky, inv, LinAlgError, det, eigvalsh
 from scipy.linalg.lapack import dpotri
 from .cov import cov_covar
-from .lib import inv_sym
+from .lib import inv_sym, cho
 
 def _state_space_innovations(cov00, cov11, cov10):
     """
@@ -59,7 +59,7 @@ def _state_space_innovations_all(cov, cross_cov):
     innov[1:] -= (cross_cov * expand_dims(trans, axis=1)).sum(3)
 
     # cholesky decomposition of innovation matrix
-    innov = cholesky(innov)
+    innov = cho(innov)
 
     return trans, innov
     

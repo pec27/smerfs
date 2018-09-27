@@ -5,7 +5,7 @@ from __future__ import print_function, division, absolute_import
 from numpy.ctypeslib import ndpointer
 import ctypes
 from numpy import float64, frombuffer, empty, complex128, array, require
-from numpy.linalg import inv, LinAlgError
+from numpy.linalg import inv, LinAlgError, cholesky
 from os import path
 import sys
 import sysconfig
@@ -41,9 +41,45 @@ def initlib():
     func = _libsmerfs.inverse
     func.restype = ctypes.c_int
     func.argtypes = [ctypes.c_int, ctypes.c_int, ndpointer(ctypes.c_double, flags=c_contig), ndpointer(ctypes.c_double, flags=c_contig)]
+
     
+    # Cholesky many small symmetric matrices
+    func = _libsmerfs.cholesky
+    func.restype = ctypes.c_int
+    func.argtypes = [ctypes.c_int, ctypes.c_int, ndpointer(ctypes.c_double, flags=c_contig), ndpointer(ctypes.c_double, flags=c_contig)]
+
+    # Build covariances in one pass in a C-func
+    # int update_cov(const int m_max, const int nz, const int M, 
+    #	       double complex norm, const double complex llp1,
+    #	       const double complex *restrict F, const double complex *restrict H,
+    #	       const double *restrict tau_power, const double *restrict eta_ratio,
+    #	       double complex *restrict cov, double complex *restrict cross_cov)
+
+    func = _libsmerfs.update_cov
+    func.restype = ctypes.c_int
+    func.argtypes = [ctypes.c_int, ctypes.c_int, ctypes.c_int,
+                     ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double,
+                     ndpointer(complex128, flags=c_contig), ndpointer(complex128, flags=c_contig),
+                     ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig), 
+                     ndpointer(complex128, flags=c_contig), ndpointer(complex128, flags=c_contig)]
+                     
+
     return _libsmerfs
     
+def update_cov(tau_power, eta_ratio, norm, llp1, F, H, cov, cross_cov):
+    nz,M = cov.shape[1:3]
+    m_max = cov.shape[0]-1
+    assert(cov.shape[3]==M)
+    assert(cross_cov.shape==(m_max+1,nz-1, M,M))
+    assert(eta_ratio.shape==(nz-1,))
+
+    lib = initlib()
+
+    res = lib.update_cov(m_max, nz, M, norm.real, norm.imag, llp1.real, llp1.imag,
+                         F, H, tau_power, eta_ratio, cov, cross_cov)
+    assert(res==0)
+    return cov, cross_cov
+
 def inv_sym(matrices):
     """
     Inverse of many small symmetric matrices
@@ -63,6 +99,28 @@ def inv_sym(matrices):
         raise Exception('Matrix size %d not supported'%M)
     if res>0:
         raise LinAlgError('Singular matrix (%d)'%(res-1))
+        
+    return out
+
+def cho(matrices):
+    """
+    Cholesky of many small symmetric matrices
+    """
+    assert(len(matrices.shape)==3)
+    assert(matrices.shape[1]==matrices.shape[2])
+    N = matrices.shape[0]
+    M = matrices.shape[1]
+    if M>2:
+        return np.cholesky(matrices)
+
+    matrices = require(matrices, dtype=float64, requirements=[c_contig])
+    out = empty((N,M,M), dtype=float64)
+    lib = initlib()
+    res = lib.cholesky(N,M,matrices, out)
+    if res==-1:
+        raise Exception('Matrix size %d not supported'%M)
+    if res>0:
+        raise LinAlgError('Non +ve definite matrix (%d)'%(res-1))
         
     return out
 
