@@ -7,7 +7,7 @@ int update_cov(const int m_max, const int N, const int M,
 	       const double llp1_re, const double llp1_im,
 	       const double complex *restrict F, const double complex *restrict H,
 	       const double *restrict tau_power, const double *restrict eta_ratio2,
-	       double complex *restrict cov, double complex *restrict cross_cov)
+	       double *restrict cov, double *restrict cross_cov)
 {
   /*
     Update the covariance (cov) and cross-covariance matrices with a single term 
@@ -60,6 +60,7 @@ int update_cov(const int m_max, const int N, const int M,
       // zeta symbols
       zeta[0] = 1.0;
       zeta[1] = m -llp1/(m+1); // First zeta
+
       for (int i=2,v=m+2;i<M;++i,++v)
 	{
 	  const double complex mult = (v*(v-1) - llp1)/v;

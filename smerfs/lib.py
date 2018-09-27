@@ -53,7 +53,7 @@ def initlib():
     #	       double complex norm, const double complex llp1,
     #	       const double complex *restrict F, const double complex *restrict H,
     #	       const double *restrict tau_power, const double *restrict eta_ratio,
-    #	       double complex *restrict cov, double complex *restrict cross_cov)
+    #	       double *restrict cov, double *restrict cross_cov)
 
     func = _libsmerfs.update_cov
     func.restype = ctypes.c_int
@@ -61,7 +61,7 @@ def initlib():
                      ctypes.c_double, ctypes.c_double, ctypes.c_double, ctypes.c_double,
                      ndpointer(complex128, flags=c_contig), ndpointer(complex128, flags=c_contig),
                      ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig), 
-                     ndpointer(complex128, flags=c_contig), ndpointer(complex128, flags=c_contig)]
+                     ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig)]
                      
 
     return _libsmerfs

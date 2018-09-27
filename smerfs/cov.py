@@ -80,12 +80,13 @@ def cov_covar(zpts, m_max, coeffs, log=None):
         tau_p[M-1-i] = tau_p[M-i]*tau_p[M-2] # tau^-i
 
     eta_ratio = tau_p[M,1:] * tau_p[M-2,:-1]
+#    tau_p = np.require(tau_p.T, requirements=['C'])
 
     F = empty((m_max+M+1, len(zpts)), dtype=complex128)
     H = empty_like(F)
     
-    cov = zeros((m_max+1,len(zpts), M, M), dtype=complex128)
-    cross_cov = zeros((m_max+1,len(zpts)-1, M, M), dtype=complex128)
+    cov = zeros((m_max+1,len(zpts), M, M), dtype=float64)
+    cross_cov = zeros((m_max+1,len(zpts)-1, M, M), dtype=float64)
 
     x = 0.5-zpts*0.5
     y = 0.5+zpts*0.5
@@ -96,8 +97,8 @@ def cov_covar(zpts, m_max, coeffs, log=None):
 
         if len(kvals)==2 and i==1 and llp1==kvals[i-1].conj():
             print('Using conjugation for coefficient pair', file=log)
-            cov += cov.conj()
-            cross_cov += cross_cov.conj()
+            cov += cov
+            cross_cov += cross_cov
             return cov, cross_cov
 
 
