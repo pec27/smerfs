@@ -34,22 +34,14 @@ int update_cov(const int m_max, const int N, const int M,
     
    */
   const int n_cross = N-1;
-  double complex zeta[M], Rc[M];
+  double complex zeta[M], Rc[M], zetaA[M], zAH[M];
   double complex norm = norm_re + I*norm_im;
   const double complex llp1 = llp1_re + I*llp1_im;
 
   double *eta = (double *)malloc(n_cross * sizeof(double));
 
-  // TODO actually only need the last two rows, can we dispose of this?
-  double complex *zAH = (double complex *)malloc(M*N*sizeof(double complex));
-
   if (!eta)
     return -1;
-  if (!zAH)
-    {
-      free(eta);
-      return -1;
-    }
 
   for (int i=0;i<n_cross;++i)
     eta[i] = 1.0;
@@ -68,14 +60,14 @@ int update_cov(const int m_max, const int N, const int M,
 	}
 
 
-      // TODO outer product, could be done with BLAS
-      for (int p=0, t_idx = (M-1)*N;p<M;++p, t_idx-=N)
-	{
-	  const double complex zetaA_q = (p&1) ? -zeta[p] : zeta[p];
-	  for (int n=0;n<N;++n)
-	    zAH[n+p*N] = zetaA_q * H[(m+p)*N+n] * tau_power[t_idx+n];
-	}
 
+      for (int p=0;p<M;++p)
+	zetaA[p] = (p&1) ? -zeta[p] : zeta[p];
+
+      for (int p=0, t_idx = (M-1)*N;p<M;++p, t_idx-=N)
+	zAH[p] = zetaA[p] * H[(m+p)*N] * tau_power[t_idx];
+
+      
       // Pre-multiply LHS by the norm
       for (int p=0;p<M;++p)
 	zeta[p] *= norm;
@@ -85,29 +77,32 @@ int update_cov(const int m_max, const int N, const int M,
 	{
 	  const double complex Lp = tau_power[t_idx] * (zeta[p] * F[F_idx]); 
       
-	  for (int q=0, z_idx=0;q<M;++q, z_idx +=N)
+	  for (int q=0;q<M;++q)
 	    {
-	      const double complex Rq = zAH[z_idx];
+	      const double complex Rq = zAH[q];
 	      // Update real part
 	      *cov++ += creal(Lp) * creal(Rq) - cimag(Lp)*cimag(Rq);
 	    }
 	}
 
-
       // Covariance and cross
-      for (int n=0,tau0=(M-1)*N+1;n<n_cross;++n)
+      for (int n=0,tau0=(M-1)*N+1;n<n_cross;++n, tau0++)
 	{
 
-	  for (int p=0,z_idx=n;p<M;++p,z_idx+=N)
-	    Rc[p] = eta[n] * zAH[z_idx];
+	  for (int p=0, t_idx = tau0;p<M;++p, t_idx-=N)
+	    {
+	      Rc[p] = eta[n] * zAH[p];
+	      zAH[p] = zetaA[p] * H[(m+p)*N+n+1] * tau_power[t_idx];
+	    }	    
 
-	  for (int p=0,F_idx=mN+n+1,t_idx=tau0++;p<M;++p,F_idx+=N, t_idx+=N)
+
+	  for (int p=0,F_idx=mN+n+1,t_idx=tau0;p<M;++p,F_idx+=N, t_idx+=N)
 	    {
 	      const double complex Lp = tau_power[t_idx] * (zeta[p] * F[F_idx]); 
-	      for (int q=0, z_idx=n+1;q<M;++q, z_idx +=N)
+	      for (int q=0;q<M;++q)
 		{
 		  // Update with real parts
-		  *cov++ += creal(Lp) * creal(zAH[z_idx]) - cimag(Lp)*cimag(zAH[z_idx]);
+		  *cov++ += creal(Lp) * creal(zAH[q]) - cimag(Lp)*cimag(zAH[q]);
 		  *cross_cov++ += creal(Lp)*creal(Rc[q]) - cimag(Lp)*cimag(Rc[q]);
 		}
 	    }
@@ -120,6 +115,5 @@ int update_cov(const int m_max, const int N, const int M,
     }
 
   free(eta);
-  free(zAH);
   return 0;
 }

@@ -4,7 +4,7 @@ Load the compiled library (libsmerfs.so)
 from __future__ import print_function, division, absolute_import
 from numpy.ctypeslib import ndpointer
 import ctypes
-from numpy import float64, frombuffer, empty, complex128, array, require
+from numpy import float64, frombuffer, empty, complex128, array, require, empty_like
 from numpy.linalg import inv, LinAlgError, cholesky
 from os import path
 import sys
@@ -62,10 +62,43 @@ def initlib():
                      ndpointer(complex128, flags=c_contig), ndpointer(complex128, flags=c_contig),
                      ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig), 
                      ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig)]
-                     
+
+    
+    # State space for 2x2 and 3x3 matrices
+    # int state_space(const int N, const int M, 
+    #		const double *restrict cross_cov, const double *restrict cov, 
+    #		double *restrict innov, double *restrict trans)
+    func = _libsmerfs.state_space
+    func.restype = ctypes.c_int
+    func.argtypes = [ctypes.c_int, ctypes.c_int, 
+                     ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig), 
+                     ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig)]
+
 
     return _libsmerfs
+
+def state_space(cross_cov, cov):
+    N,M = cov.shape[:2]
+    assert(M in (2,3))
+    assert(cov.shape==(N,M,M))
+    assert(cross_cov.shape==(N-1,M,M))
+
+    cc = require(cross_cov, requirements=['C'], dtype=float64)
+    cv = require(cov, requirements=['C'], dtype=float64)
     
+    trans = empty_like(cross_cov)
+    innov = empty_like(cov)
+    lib = initlib()
+    res = lib.state_space(N,M,cc, cv, innov, trans)
+
+    if res==-1:
+        raise Exception('Matrix size %d not supported'%M)
+    if res>0:
+        raise LinAlgError('Inverse or cholesky proplem at matrix (%d)'%(res-1))
+
+    assert(res==0)
+    return innov, trans
+
 def update_cov(tau_power, eta_ratio, norm, llp1, F, H, cov, cross_cov):
     nz,M = cov.shape[1:3]
     m_max = cov.shape[0]-1
@@ -111,7 +144,7 @@ def cho(matrices):
     N = matrices.shape[0]
     M = matrices.shape[1]
     if M>2:
-        return np.cholesky(matrices)
+        return cholesky(matrices)
 
     matrices = require(matrices, dtype=float64, requirements=[c_contig])
     out = empty((N,M,M), dtype=float64)

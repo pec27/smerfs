@@ -8,7 +8,7 @@ from time import time
 from numpy.linalg import cholesky, inv, LinAlgError, det, eigvalsh
 from scipy.linalg.lapack import dpotri
 from .cov import cov_covar
-from .lib import inv_sym, cho
+from .lib import inv_sym, cho, state_space
 
 def _state_space_innovations(cov00, cov11, cov10):
     """
@@ -39,13 +39,17 @@ def _state_space_innovations(cov00, cov11, cov10):
         raise
     return innov, trans
 
-def _state_space_innovations_all(cov, cross_cov):
+def _state_space_innovations_all(cov, cross_cov, default_c=True):
     """
     Like state-space innovations but for a whole array (n,m,m) of 
     covariances and cross-covariances
     """
-
     M = cov.shape[-1]
+
+    if M<=3 and default_c:
+        innov, trans = state_space(cross_cov, cov)
+        return trans, innov
+
     n = cross_cov.shape[0]
     innov = cov.copy()
 
@@ -98,14 +102,13 @@ def gm_walkz(nz, msize, coeffs, dtype=float64, log=None):
     
     for m in range(msize):
 
-        
         # Arrange the arrays so we can use numpy to simultaneously do the state-space transitions
         cov = cov_all[m]
         cross_cov = cross_all[m] 
 
         try:
             tran, innov = _state_space_innovations_all(cov, cross_cov)
-        except LinAlgError:
+        except LinAlgError as err:
             # Must have failed the Cholesky (or inversion) of one of the matrices
             for i in range(len(cross_cov)):
                 
@@ -118,6 +121,7 @@ def gm_walkz(nz, msize, coeffs, dtype=float64, log=None):
                     print('Cross\n', cross_cov[i])
                     print('Number of phi points (%d)'%(2*msize-2))
                     raise
+            print('Exception when constructing all state-space: {0}'.format(err), file=log)
             raise Exception('Failure in array of matrices but not individually. This should never happen.')
             raise
         innovs[m] = innov
