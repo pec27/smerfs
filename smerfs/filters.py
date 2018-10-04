@@ -9,7 +9,7 @@ build_filter(nz, nphi, coeffs, lmax, eta, dtype) - method to make new filters
 """
 from __future__ import print_function, division, unicode_literals, absolute_import
 from numpy.fft import irfft
-from numpy import float64, empty, cumsum, arange, uint32, sqrt, load, pi, sin, empty_like
+from numpy import float64, empty, cumsum, arange, uint32, sqrt, load, pi, sin, empty_like, transpose, require, complex128
 from .condition import gm_walkz
 from numpy.random import standard_normal, RandomState
 
@@ -27,15 +27,14 @@ class EquatorialSphereFilter:
     white noise on S^2 to produce a Gaussian Random Field with a given power
     spectrum, using the method
     
-    s.create_realisation(real=True)
+    s.create_realisation()
 
     The power spectrum of the walk is given by the tuple s.coeffs, which gives
     the coefficients for the pseudo-Markov process.
     """
 
-    def __init__(self, coeffs, transp, innovsp, nz, nphi, randomstate=None): 
-        self._data = (coeffs, transp, innovsp, nz, nphi)
-        trans, innovs = unpack_coeffs(transp, innovsp, nz, nphi)
+    def __init__(self, coeffs, trans, innovs, nz, nphi, randomstate=None): 
+
 
         self.coeffs = tuple(coeffs)
         self._trans  = trans
@@ -46,7 +45,7 @@ class EquatorialSphereFilter:
             randomstate = RandomState(seed=123)
         self._randomstate = randomstate
     
-    def create_realisation(self):
+    def create_realisation(self, log=None):
         """ create a realisation of the given GMRF """
         
         p = self._nphi # number of phi points
@@ -57,14 +56,18 @@ class EquatorialSphereFilter:
 
         n_m = p//2 + 1 # number of m-modes for these phi-points
         # generate the noise
-        noise = (rs.standard_normal((n,M,n_m)) + 1.0j * rs.standard_normal((n,M,n_m))) * sqrt(0.5)
+        if log is not None:
+            print('Creating {:,} random numbers'.format(n_m*M*n*2), file=log)
+
+        noise = rs.standard_normal((n*M*n_m*2)).view(complex128).reshape((n,M,n_m))*sqrt(0.5)
         
         res = empty((n,n_m), dtype=noise.dtype)
 
         # Work from the (or just below the) equator up
         uhalf = n//2 + 1
         assert(self._jumps.shape[0]==uhalf)
-
+        if log is not None:
+            print('Filtering', file=log)
         fp_fstart = (self._jumps[0] * noise[0]).sum(1)
         fp_f = fp_fstart
         res[uhalf-1] = fp_f[0] # just interested in storing the value, not the derivatives
@@ -91,6 +94,8 @@ class EquatorialSphereFilter:
 
         res[:,0] = res[:,0].real * sqrt(2.0) # Makes up for us simulating the real component g_0 with complex noise
 
+        if log is not None:
+            print('FFT', file=log)
         res = irfft(res, p)
         res *= p # FFT convention
 
@@ -105,15 +110,23 @@ class EquatorialSphereFilter:
         return 'coeffs: '+str(self.coeffs)+' shape '+str(self.shape())
 
     def save(self, name):
-        """ save the filter to the named file """
+        """ save the filter to the named file or file-like object (write method) """
+
+        trans_packed, innovs_packed = packup_coeffs(self._trans, self._jumps, dtype=self._trans.dtype)
+        data = (self.coeffs, trans_packed, innovs_packed, self._nz, self._nphi)
+
+        if hasattr(name, 'write'):
+            pickle.dump(data, name, protocol=2) # need 2 protocol for numpy data in binary
+            return 
+
         assert(name[-4:]=='.dat') # check is a .dat file 
-        
-        f = open(name, 'wb')
-        pickle.dump(self._data, f, protocol=2) # need 2 protocol for numpy data in binary
-        f.close()
+
+        with open(name, 'wb') as f:
+            pickle.dump(data, f, protocol=2) # need 2 protocol for numpy data in binary
+
 
      
-def load_filter(name, randomstate=None):
+def load_filter(name, randomstate=None, log=None):
     """ 
     load an EquatorialSphereFilter (.dat) 
     
@@ -122,50 +135,60 @@ def load_filter(name, randomstate=None):
 
     returns sf - SphereFilter or EquatorialSphereFilter
     """
-    f = open(name, 'rb')
-    coeffs, transp, innovsp, nz, nphi = pickle.load(f)
-    f.close()
-    
+    if hasattr(name, 'read') and hasattr(name, 'readline'):
+        coeffs, transp, innovsp, nz, nphi = pickle.load(name)
+    else:
+        f = open(name, 'rb')
+        coeffs, transp, innovsp, nz, nphi = pickle.load(f)
+        f.close()
+
+    trans, innovs = unpack_coeffs(transp, innovsp, nz, nphi, log=log)
+
     rs = randomstate
     if rs is None:
         rs = RandomState()
-    esf = EquatorialSphereFilter(coeffs, transp, innovsp, nz, nphi, rs)
+    esf = EquatorialSphereFilter(coeffs, trans, innovs, nz, nphi, rs)
     return esf
 
-def packup_coeffs(trans, innovs, dtype):
-    print('Packing up coefficients')
-    M = innovs[0].shape[-1]
+def packup_coeffs(trans, innovs, dtype, log=None):
+    print('Packing up coefficients',file=log)
+    M = innovs.shape[1]
+
     trans_packed = trans.astype(dtype)
-    
+    nz, n_m = innovs.shape[0], innovs.shape[3]
+
     # Only lower triangle for Cholesky decomposition
     lower_tri = cumsum(arange(M))
-    innov_packed = empty(innovs.shape[:2]+((M*M+M)//2,), dtype=dtype)
+    innov_packed = empty((nz, (M*M+M)//2,n_m), dtype=dtype)
+
     for i, p0 in enumerate(lower_tri):
         p1 = p0 + i + 1
-        innov_packed[:,:, p0:p1] = innovs[:,:,i,:i+1]
+        innov_packed[:,p0:p1,:] = innovs[:,i,:i+1,:]
     assert((innov_packed!=0).all())
 
     return trans_packed, innov_packed
 
-def unpack_coeffs(trans_packed, innov_packed, nz, nphi):
-    print('Unpacking coefficients')
+def unpack_coeffs(trans_packed, innov_packed, nz, nphi, log=None):
+    print('Unpacking coefficients', file=log)
     # Split out the trans matrices for the different m values.
-    M  = trans_packed.shape[-1]
+    M  = trans_packed.shape[1]
     trans = trans_packed.copy()
         
     # Similar for innov matrices, these are further complicated as we only
     # store lower triangle of the Cholesky decomposition.
-    m_size = trans.shape[0]
-    innovs = empty(innov_packed.shape[:2]+(M, M), dtype=innov_packed.dtype)
+    m_size = trans.shape[-1]
+    nz = trans.shape[0]+1
+    innovs = empty((nz, M, M, m_size), dtype=innov_packed.dtype)
 
     lower_tri = cumsum(arange(M))
     
 
     for i, p0 in enumerate(lower_tri):
         p1 = p0 + i + 1
-        innovs[:,:,i,:i+1] = innov_packed[:,:,p0:p1] # Lower triangle
-        innovs[:,:,i,i+1:] = 0.0 # Upper triangle
+        innovs[:,i,:i+1] = innov_packed[:,p0:p1,:] # Lower triangle
+        innovs[:,i,i+1:] = 0.0 # Upper triangle
 
+    return trans, innovs
     uhalf = nz//2+1 # Upper half of sphere
     n_m = nphi//2+1
     trans_matrix = empty((uhalf-1, M, M, n_m), dtype=trans_packed.dtype)
@@ -178,7 +201,7 @@ def unpack_coeffs(trans_packed, innov_packed, nz, nphi):
     return trans_matrix, innov_matrix
 
 
-def build_filter(nz, nphi, coeffs, dtype=float64):
+def build_filter(nz, nphi, coeffs, dtype=float64, log=None):
     """ 
     Construct an EquatorialSphereFilter for the pseudo-Markov process on the iso-latitude
     grid with points equidistant in theta and phi.
@@ -191,10 +214,13 @@ def build_filter(nz, nphi, coeffs, dtype=float64):
     sf - an instance of SphereFilter
     """
 
-    trans, innov = gm_walkz(nz, nphi//2+1, coeffs, dtype)    
-    trans_packed, innovs_packed = packup_coeffs(trans, innov, dtype=dtype)
-
-    sf = EquatorialSphereFilter(coeffs, trans_packed, innovs_packed, nz, nphi)
+    trans, innovs = gm_walkz(nz, nphi//2+1, coeffs, dtype, log)
+    if log is not None:
+        print('Reshaping', file=log)
+    # making new shape:
+    trans = require(transpose(trans, (1,2,3,0)), requirements=['C'])  #  (nz-1, M,M, nphi//2+1)
+    innovs = require(transpose(innovs, (1,2,3,0)), requirements=['C']) #  (nz-1, M,M, nphi//2+1)
+    sf = EquatorialSphereFilter(coeffs, trans, innovs, nz, nphi)
     return sf
 
 
