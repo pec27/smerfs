@@ -11,7 +11,8 @@ from __future__ import print_function, division, unicode_literals, absolute_impo
 from numpy.fft import irfft
 from numpy import float64, empty, cumsum, arange, uint32, sqrt, load, pi, sin, empty_like, transpose, require, complex128
 from .condition import gm_walkz
-from numpy.random import standard_normal, RandomState
+from .random import z_complex_normal # ziggurat normals
+from numpy.random import RandomState
 
 try:
     import cPickle as pickle
@@ -59,8 +60,7 @@ class EquatorialSphereFilter:
         if log is not None:
             print('Creating {:,} random numbers'.format(n_m*M*n*2), file=log)
 
-        noise = rs.standard_normal((n*M*n_m*2)).view(complex128).reshape((n,M,n_m))*sqrt(0.5)
-        
+        noise = z_complex_normal(n*M*n_m, rs).reshape((n,M,n_m))
         res = empty((n,n_m), dtype=noise.dtype)
 
         # Work from the (or just below the) equator up

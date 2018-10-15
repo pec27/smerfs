@@ -4,7 +4,7 @@ Load the compiled library (libsmerfs.so)
 from __future__ import print_function, division, absolute_import
 from numpy.ctypeslib import ndpointer
 import ctypes
-from numpy import float64, frombuffer, empty, complex128, array, require, empty_like
+from numpy import float64, frombuffer, empty, complex128, array, require, empty_like, uint32, float32
 from numpy.linalg import inv, LinAlgError, cholesky
 from os import path
 import sys
@@ -75,7 +75,27 @@ def initlib():
                      ndpointer(float64, flags=c_contig), ndpointer(float64, flags=c_contig)]
 
 
+
+    # Standard normal  float32s using the Ziggurat method (Marsaglia & Tsang)
+    # int zigg(const int num_needed, int num_ints, const uint32_t *restrict rand_ints, 
+    #	 float *restrict out)
+    func = _libsmerfs.zigg
+    func.restype = ctypes.c_int
+    func.argtypes = [ctypes.c_int, ctypes.c_int, 
+                     ndpointer(uint32, flags=c_contig), ndpointer(float32, flags=c_contig)]
+
     return _libsmerfs
+
+def zigg(n_wanted, r_int):
+    assert(r_int.dtype==uint32)
+
+    out = empty(n_wanted, float32)
+    lib = initlib()
+
+    # number of normals remaining:
+    todo = lib.zigg(n_wanted, r_int.size, r_int, out)
+    # return the random normals (or as many as I could make with these integers)
+    return out[:(n_wanted-todo)]
 
 def state_space(cross_cov, cov):
     N,M = cov.shape[:2]
