@@ -2,7 +2,7 @@
 Use a Ziggurat method to make random normal variates faster than numpy
 """
 from __future__ import absolute_import
-from numpy import empty, float32, fromstring, uint32, complex64
+from numpy import empty, float32, frombuffer, uint32, complex64
 from numpy.random import RandomState
 from .lib import zigg
 
@@ -31,7 +31,7 @@ def z_standard_normal(num, random_state=None):
             print('Not enough random integers for normals, increasing')
             print('Need {:,} random numbers'.format(n_needed), 'guess {:,}'.format(guess_n_rand), 'i0=',i0)
         
-        ri = fromstring(random_state.bytes(4*guess_n_rand), dtype=uint32)
+        ri = frombuffer(random_state.bytes(4*guess_n_rand), dtype=uint32)
 
         # consume ri as needed
         res = zigg(n_needed, ri)

@@ -20,7 +20,7 @@ def initlib():
     if _libsmerfs is not None:
         return _libsmerfs
 
-    suffix = sysconfig.get_config_var('SO')
+    suffix = sysconfig.get_config_var('EXT_SUFFIX')
 
     name = path.join(path.dirname(path.abspath(__file__)), '../libsmerfs'+suffix)
     if not path.exists(name):
