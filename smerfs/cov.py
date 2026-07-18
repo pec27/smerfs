@@ -29,9 +29,9 @@ def partial_decomposition(coeffs):
     where c_n is from the tuple of coeffs. We use the partial fraction
     decomposition to write this as
 
-            /     a_i      \
-    Sum    |  ------------  |
-            \  ( k - b_i)  /
+                        a_i   
+    Sum            ------------
+    i=0...n-1         k - b_i
 
     i.e. the {b_i} are the roots of the polynomial. Note that even if the 
     c_n are all real and positive, the {a_i} and {b_i} are generally complex.

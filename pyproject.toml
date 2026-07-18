@@ -1,0 +1,21 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "smerfs"
+version = "0.1.1"
+description = "Stochastic Markov Evaluation of Random Fields on the Sphere (SMERFS)"
+readme = "README.md"
+requires-python = ">=3.8"
+dependencies = ["numpy", "scipy"]
+authors=[{name = "Peter Creasey", email="p.e.creasey.00@gmail.com"}]
+license = 'MIT'
+
+[project.optional-dependencies]
+test = ["pytest"]
+
+[project.urls]
+Homepage = "https://github.com/pec27/smerfs"
+Documentation = "https://github.com/pec27/smerfs#readme"
+Repository = "https://github.com/pec27/smerfs.git"

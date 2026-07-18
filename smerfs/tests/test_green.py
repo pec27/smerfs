@@ -107,7 +107,7 @@ def test_cov_symmetric_real():
                 asym = abs(cov - cov.T).ravel().max()
                 print('x=', x,'Asym', asym, 'Max imaginary part', max_imag)
                 assert(asym<1e-10)
-                assert(max_imag<2e-12)
+                assert(max_imag<2e-12) # On x86 1e-12 enough, but on Mac silicon getting 1.7e-12 errs
 
 def test_opt_cov():
     """

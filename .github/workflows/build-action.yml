@@ -1,0 +1,22 @@
+name: Test smerfs install
+run-name: ${{ github.actor }} launched build
+on: [push]
+jobs:
+  Build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: checkout
+        uses: actions/checkout@v6
+      - name: Setup python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.10"
+          cache: "pip"
+      - name: Test install
+        run: |
+          # Normal users would just run "pip install .", but we run tests here
+          # Using -v for compiler warnings
+          pip install ".[test]" -v
+          python -c "import smerfs; print('Smerfs package successfully installed!')"
+          pytest -v --pyargs smerfs
+

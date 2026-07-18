@@ -29,12 +29,9 @@ def analytic_cov(coeffs,cos_mu, lmax=1000):
     """
     Evaluate the covariance function 
 
-                  inf
-                  ---
-    C(cos(mu)) := \   (2l+1) C_l P_l (cos(mu)) / 4 pi
-                  /
-                  ---
-                  l=0
+    C(cos(mu)) := Sum      (2l+1) C_l P_l (cos(mu)) / 4 pi
+                  
+                  l=0...inf
 
     """
 

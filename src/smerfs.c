@@ -226,7 +226,7 @@ int hyp_llp1(const double llp1_real, const double llp1_imag, const int m, const 
     return 0 on success, 1 on failure (too many iterations)
    */
   int i;
-  double complex llp1, l, gamma_ratio0, psi0;
+  double complex llp1, l, psi0;
 #ifdef DEBUG
   int used_psi=0;
 #endif
@@ -249,7 +249,7 @@ int hyp_llp1(const double llp1_real, const double llp1_imag, const int m, const 
     l = -0.5 - csqrt(0.25 + llp1);
 
   // Cache some vaiues for use with hyp_lmz
-  if (m>0) gamma_ratio0 = gamma_ratio(l,m);
+  const double complex gamma_ratio0 = m>0 ? gamma_ratio(l,m) : 0.0; // NB gamma ratio unused (below) for m==0
 
   psi0 = cpsi(1) + cpsi(1+m) - cpsi(m-l) -  cpsi(m+l+1);
 
