@@ -1,7 +1,7 @@
 """
 Utility functions for testing
 """
-from numpy import *
+from numpy import zeros, pi, sqrt, power, arange, array, cos, cumprod, square, sin, complex128, empty
 from smerfs import chyp_c, lam_from_llp1, cov_covar, partial_decomposition
 import numpy as np
 from numpy.linalg import inv
