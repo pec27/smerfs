@@ -4,11 +4,11 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "smerfs"
-version = "0.1.1"
+version = "0.1.2"
 description = "Stochastic Markov Evaluation of Random Fields on the Sphere (SMERFS)"
 readme = "README.md"
-requires-python = ">=3.8"
-dependencies = ["numpy", "scipy"]
+requires-python = ">=3.10"
+dependencies = ["numpy", "scipy>=1.15"]
 authors=[{name = "Peter Creasey", email="p.e.creasey.00@gmail.com"}]
 license = 'MIT'
 

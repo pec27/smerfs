@@ -34,7 +34,7 @@ def test_Pml():
                      (3,5,0.4), (2,5,0.4), (3,22,0.4)]:
         llp1 = lam*(lam+1)
         p = P_m_llp1(m, llp1, x)  # P^m_lam(x)
-        p_scipy = lpmn(m, lam, x)[0][-1,-1] # Scipy version
+        p_scipy = assoc_legendre_p(lam, m, x) # Scipy version
 
         err = abs(p-p_scipy) / abs(p_scipy)
         

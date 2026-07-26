@@ -5,7 +5,7 @@ from numpy import zeros, pi, sqrt, power, arange, array, cos, cumprod, square, s
 from smerfs import chyp_c, lam_from_llp1, cov_covar, partial_decomposition
 import numpy as np
 from numpy.linalg import inv
-from scipy.special import gamma, lpmn
+from scipy.special import gamma, assoc_legendre_p
 
 
 def Jpq(m, coeffs, x, y):
