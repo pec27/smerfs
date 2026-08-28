@@ -41,7 +41,7 @@ def analytic_cov(coeffs,cos_mu, lmax=1000):
 
     correl = zeros(len(cos_mu))
     for i,z in enumerate(cos_mu):
-        Plz, dPlz_dz = legendre_p_all(lmax, z, diff_n=1)
+        Plz = legendre_p_all(lmax, z)[0]
         correl[i] = inner(Plz, l_coeffs)
 
     return correl
