@@ -9,6 +9,7 @@ from numpy.linalg import inv, LinAlgError, cholesky
 from os import path
 import sys
 import sysconfig
+import time
 
 _libsmerfs = None
 c_contig = 'C_CONTIGUOUS' 
@@ -27,6 +28,7 @@ def initlib():
         raise Exception('Library '+str(name)+' does not exist. Maybe you forgot to make it?')
 
     print('Loading libsmerfs - Stochastic Markov Evaluation of Random Fields on the Sphere')
+    print(str(name), 'last modified', time.ctime(path.getmtime(name)))
     _libsmerfs = ctypes.cdll.LoadLibrary(name)
 
     # Hypergeometric function evaluation
@@ -35,6 +37,13 @@ def initlib():
     func = _libsmerfs.hyp_llp1
     func.restype = ctypes.c_int
     func.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_int, ndpointer(ctypes.c_double, flags=c_contig), ndpointer(complex128, flags=c_contig)]
+
+    # Individual hypergeometric function evaluation (mostly for debug)
+    # C declaration is below
+    # void hyp_llp1_m_z_single(const double llp1_real, const double llp1_imag, const int m, const double z, double complex* restrict out)
+    func = _libsmerfs.hyp_llp1_m_z_single
+    func.restype = None
+    func.argtypes = [ctypes.c_double, ctypes.c_double, ctypes.c_int, ctypes.c_double, ndpointer(complex128, flags=c_contig)]
 
     # Invert many small symmetric matrices
     # int inverse(const int N, const int M, const double *restrict matrices, double *restrict out)
@@ -205,5 +214,11 @@ def chyp_c(llp1, m, z):
 
     return out
 
-
+def chyp_c_single_series(llp1, m, z):
+    """ Like chyp_c but for a single evaluation using series expansion. Mostly here for debug """
+    lib = initlib()
+    out = empty(1, dtype=complex128)    
+    lib.hyp_llp1_m_z_single(llp1.real, llp1.imag, m, z, out)
+    return out
+    
 

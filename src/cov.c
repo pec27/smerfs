@@ -38,7 +38,7 @@ int update_cov(const int m_max, const int N, const int M,
   double complex norm = norm_re + I*norm_im;
   const double complex llp1 = llp1_re + I*llp1_im;
 
-  double *eta = (double *)malloc(n_cross * sizeof(double));
+  double *eta = (double *)malloc((unsigned)n_cross * sizeof(double));
 
   if (!eta)
     return -1;

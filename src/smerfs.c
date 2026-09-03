@@ -8,7 +8,7 @@
 #include <complex.h>
 //#define DEBUG
 
-#ifdef DEBUG
+#ifndef NDEBUG
 #include <stdio.h>
 #endif
 
@@ -92,7 +92,7 @@ static double complex gamma_ratio(const double complex l, const int m)
 }
 
 
-double complex hyp_lmz(const double complex l, const int m, const double z, const double complex gamma_ratio0, const double complex psi0)
+double complex hyp_lmz_pole(const double complex l, const int m, const double z, const double complex gamma_ratio0, const double complex psi0)
 {
   /*
     Hypergeometric function  F(-l, l+1, 1+m,z) for large z (0.5<z<1)
@@ -123,14 +123,14 @@ double complex hyp_lmz(const double complex l, const int m, const double z, cons
       for (n=0; n<m;n++)
 	{
 	  res += term;
-	  if ((fabs(creal(term)) < fabs(creal(res)) * EPS) && ((fabs(cimag(term)) < fabs(cimag(res)) * EPS)))
-	    break;
+//	  if ((fabs(creal(term)) < fabs(creal(res)) * EPS) && ((fabs(cimag(term)) < fabs(cimag(res)) * EPS)))
+//	    break;
 	  term *= s * ((n+1)*n - llp1) / ((n+1) * (n+1-m));
 	}
     }
 
   // Now the infinite series
-
+  printf("After poly res=%e + %ej\n", creal(res), cimag(res));
   n=0; // Zero-th term
   psi_term = psi0 - log(s);
   poch = -csin(PI * l) / PI; // Euler's reflection formula
@@ -143,7 +143,7 @@ double complex hyp_lmz(const double complex l, const int m, const double z, cons
   term = poch * psi_term;
 
   res += term;
-  
+
   // Higher terms...
   for (n=1; n<MAX_ITERATIONS;n++)
     {
@@ -164,11 +164,12 @@ double complex hyp_lmz(const double complex l, const int m, const double z, cons
       if ((fabs(creal(term)) < fabs(creal(res)) * EPS) && (fabs(cimag(term)) < fabs(cimag(res)) * EPS))
 	return res;
     }
-#ifdef DEBUG
+#ifndef NDEBUG
   printf("Too many iterations (%d) at z=%f in psi-function expansion\n",MAX_ITERATIONS, z);
 #endif
   return res;
 }
+
 static double complex hyp_llpz(const double complex llp1, const int m, const double z)
 {
  /*
@@ -208,6 +209,30 @@ static double complex hyp_llpz(const double complex llp1, const int m, const dou
   return res;
 
 }
+
+void hyp_llp1_m_z_single(const double llp1_real, const double llp1_imag, const int m, const double z, double complex* restrict out)
+{
+  const double complex res = hyp_llpz(llp1_real + I * llp1_imag, m, z);
+  *out = res;
+}
+
+// Direct evaluation of the polar formulation of 2F1( -l, l+1; c; z). This is an expensive evaluation as we do not pass in any precomputed
+// digamma values, and probably should only be used for testing
+double complex hyp_llp1_c_pole(const double complex llp1, const int c, const double z)
+{
+  const double complex l =  creal(llp1)<-0.25 ?
+    -0.5 + I * csqrt(-0.25 - llp1) :
+    -0.5 - csqrt(0.25 + llp1);
+
+  // Prefactors for use with hyp_lmz_pole. 
+  const double complex gamma_ratio0 = c>1 ? gamma_ratio(l,c-1) : 0.0; // NB gamma ratio unused (below) for c==1
+
+  // Suspect we might want to expand out the m terms to make more accurate?
+  const double complex psi0 = cpsi(1) + cpsi(c) - cpsi(c-(l+1)) -  cpsi(c+l);
+
+  return hyp_lmz_pole(l, c-1, z, gamma_ratio0, psi0);
+}
+
 int hyp_llp1(const double llp1_real, const double llp1_imag, const int m, const int nz, const double *zvals, double complex *out)
 {
   /*
@@ -226,33 +251,36 @@ int hyp_llp1(const double llp1_real, const double llp1_imag, const int m, const 
     return 0 on success, 1 on failure (too many iterations)
    */
   int i;
-  double complex llp1, l, psi0;
+
 #ifdef DEBUG
   int used_psi=0;
 #endif
 
-  llp1 = llp1_real + llp1_imag * I;
-  const double alpha = (m+1)*(m+1)/cabs(llp1); // Determines ratio of coefficients
-  double zcrit = 1.0 - 0.125*alpha; // When to turnover to psi-expansion
-  if (alpha>10) zcrit=0.99;
-  if (zcrit>0.99) zcrit=0.99;
-  if (zcrit<0.75) zcrit = 0.75;
+  const double complex llp1 = llp1_real + llp1_imag * I;
+//  const double alpha = 30*(m+1)/cabs(llp1); // Determines ratio of coefficients
+  double zcrit = 0.8;//1.0 - 0.125*alpha; // When to turnover to psi-expansion
+//  if (alpha>10) zcrit=0.99;
+//  if (zcrit>0.99) zcrit=0.99;
+//  if (zcrit<0.75) zcrit = 0.75;
 #ifdef DEBUG
   
   printf("z crit %f at m=%d, |l(l+1)|=%f \n",(float)zcrit, m, cabs(llp1));
   
 #endif  
   
-  if (creal(llp1)<-0.25) 
-    l = -0.5 + I * csqrt(-0.25 - llp1);
-  else 
-    l = -0.5 - csqrt(0.25 + llp1);
+  const double complex l =  creal(llp1)<-0.25 ?
+    -0.5 + I * csqrt(-0.25 - llp1) :
+    -0.5 - csqrt(0.25 + llp1);
 
   // Cache some vaiues for use with hyp_lmz
   const double complex gamma_ratio0 = m>0 ? gamma_ratio(l,m) : 0.0; // NB gamma ratio unused (below) for m==0
 
-  psi0 = cpsi(1) + cpsi(1+m) - cpsi(m-l) -  cpsi(m+l+1);
-
+  //double complex psi0 = cpsi(1) + cpsi(1+m) - cpsi(m-l) -  cpsi(m+l+1);
+  double complex psi0 = 2*cpsi(1) - cpsi(-l) -  cpsi(l+1);
+  for (int k=1; k<=m; ++k)
+  {
+    psi0 += 1.0 / (double)k - (double)(2*k - 1)/ ((double)(k*(k-1)) -llp1);
+  }
   for (i=0; i<nz; ++i)
     {
 
@@ -264,7 +292,7 @@ int hyp_llp1(const double llp1_real, const double llp1_imag, const int m, const 
       else
 	{
 	  // Psi series expansion when z close to 1
-	  out[i] = hyp_lmz(l, m, zvals[i], gamma_ratio0, psi0);
+	  out[i] = hyp_lmz_pole(l, m, zvals[i], gamma_ratio0, psi0);
 #ifdef DEBUG
 	  if (!used_psi)
 	    {

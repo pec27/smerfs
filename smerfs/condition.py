@@ -7,7 +7,7 @@ from numpy import float64, arange, pi, cos, sin, empty, transpose, isfinite, \
 from time import time
 from numpy.linalg import cholesky, inv, LinAlgError, det, eigvalsh
 from scipy.linalg.lapack import dpotri
-from .cov import cov_covar
+from .cov import cov_covar, partial_decomposition
 from .lib import inv_sym, cho, state_space
 
 def _state_space_innovations(cov00, cov11, cov10):
@@ -32,10 +32,12 @@ def _state_space_innovations(cov00, cov11, cov10):
     
     A = cov11 - dot(cov10, trans.T)
     try:
+        # Make symmetric
+#        A += A.T
+#        A *= 0.5
         innov = cholesky(A)
     except LinAlgError:
-        print('Could not make cholesky decomposition of')
-        print(A)
+        raise LinAlgError('Could not make cholesky decomposition of\n%s'%repr(A))
         raise
     return innov, trans
 
@@ -120,6 +122,9 @@ def gm_walkz(nz, msize, coeffs, dtype=float64, log=None):
                     print('Covariance 1\n',cov[i+1])
                     print('Cross\n', cross_cov[i])
                     print('Number of phi points (%d)'%(2*msize-2))
+                    print('Coeffs', coeffs, 'with partial fraction decomposition')
+                    print(partial_decomposition(coeffs))
+                    cov_covar(z_pts[i:i+2], m+1, coeffs, log, verbose=True)
                     raise
             print('Exception when constructing all state-space: {0}'.format(err), file=log)
             raise Exception('Failure in array of matrices but not individually. This should never happen.')

@@ -52,7 +52,7 @@ def partial_decomposition(coeffs):
 
     return a, b
 
-def cov_covar(zpts, m_max, coeffs, log=None):
+def cov_covar(zpts, m_max, coeffs, log=None, verbose=False):
     """ Find the covariance and cross covariance matrices for the zpts """
     if all(zpts[:-1] > zpts[1:]):
         print('In reverse order to normal (increasing z)', file=log)
@@ -95,7 +95,7 @@ def cov_covar(zpts, m_max, coeffs, log=None):
     for i, (ai, llp1) in enumerate(zip(a, kvals)):
 
 
-        if len(kvals)==2 and i==1 and llp1==kvals[i-1].conj():
+        if False:#len(kvals)==2 and i==1 and llp1==kvals[i-1].conj():
             print('Using conjugation for coefficient pair', file=log)
             cov += cov
             cross_cov += cross_cov
@@ -106,10 +106,14 @@ def cov_covar(zpts, m_max, coeffs, log=None):
         for m in range(m_max+M+1):
             F[m] = chyp_c(llp1, m, x)
             H[m] = chyp_c(llp1, m, y)
-
+            if m>=m_max and verbose:
+                print('2_F_1 (l(l+1)=', llp1, ', m=%d,'%m, x,') =', F[m], file=log)
+                print('2_F_1 (l(l+1)=', llp1, ', m=%d,'%m, y,') =', H[m], file=log)                
+                
 
         norm = -(0.25/pi) * ai * pi / sin(lam_from_llp1(llp1)*pi)
-
+        if verbose:
+            print('norm', norm, file=log)
 #        print('Putting into matrix in C', file=log)
         update_cov(tau_p, eta_ratio, norm, llp1, F, H, cov, cross_cov)
 
