@@ -16,6 +16,16 @@
 #define EPS 1e-13
 const double PI = 3.141592653589793;
 
+#ifndef NDEBUG
+
+// Square-magnitude of z
+static inline double cnorm2(const double complex z)
+{
+  return creal(z)*creal(z) + cimag(z)*cimag(z);
+}
+
+#endif
+  
 static double complex cpsi(const double complex z)
 {
   /*
@@ -70,7 +80,7 @@ static double complex cpsi(const double complex z)
   return psi;
 
 }
-static double complex gamma_ratio(const double complex l, const int m)
+static inline double complex gamma_ratio(const double complex l, const int m)
 {
   /*
     Calculate gamma(m+1) * gamma(m) / gamma(m-l) / gamma(m+l+1)
@@ -187,15 +197,28 @@ static double complex hyp_llpz(const double complex llp1, const int m, const dou
 
  */
 
-  double complex term, res;
-  int q;
+  double complex term = 1.0;
+  
+  int q = 1;
 
-  term = 1.0;
-  res = term;
-  q = 1;
+  double complex res = term;
+
+#ifndef NDEBUG
+  double complex debug_largest_term = term;
+  int debug_i_largest = 0;
+#endif
   
   do {
     term *= z * ((q*(q-1) - llp1) / (q*(m+q)));
+
+#ifndef NDEBUG
+    if (cnorm2(term) > cnorm2(debug_largest_term))
+    {
+      debug_largest_term = term;
+      debug_i_largest = q;
+    }
+#endif
+    
     res += term;
     q++; 
   } while (((fabs(creal(term)) > fabs(creal(res) * EPS)) || (fabs(cimag(term)) > fabs(cimag(res) * EPS))) && (q<MAX_ITERATIONS));
@@ -206,6 +229,12 @@ static double complex hyp_llpz(const double complex llp1, const int m, const dou
 #endif
       exit(1);
     }
+#ifndef NDEBUG
+  printf("Direct series summation of F(llp1=%e+%e, m+1=%d, z=%e) has largest term %e+%ej at n=%d\n",
+	 creal(llp1),cimag(llp1),m+1, z,
+	 creal(debug_largest_term),cimag(debug_largest_term),debug_i_largest);
+#endif
+  
   return res;
 
 }
